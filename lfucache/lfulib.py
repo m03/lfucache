@@ -3,6 +3,7 @@
 """
 A quick implementation of Least Frequently Used leveraging collections.deque.
 """
+from __future__ import absolute_import
 from collections import deque
 import numbers
 import logging
