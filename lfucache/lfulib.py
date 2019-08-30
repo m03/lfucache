@@ -1,25 +1,27 @@
 # -*- coding: utf-8 -*-
 # vim: ft=python
 """
+lfucache.lfulib
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 A quick implementation of Least Frequently Used leveraging collections.deque.
 """
+# Import python libs.
 from __future__ import absolute_import
 from collections import deque
-import numbers
 import logging
+import numbers
+
+# Import from local project.
+from lfucache.exceptions import (
+    InvalidItemException,
+    LFUCacheException,
+)
 
 
 _LOGGER = logging.getLogger(__name__)
 
 _NOT_FOUND = -1
-
-
-class LFUCacheException(Exception):
-    """ Parent for all exceptions in this package """
-
-
-class InvalidItemException(LFUCacheException):
-    """ The item key or value does not pass validation """
 
 
 class LFUCache:
@@ -63,12 +65,12 @@ class LFUCache:
         :return: The value of the given key in cache.
         :rtype: int
         """
-        if key not in self.items:
-            return _NOT_FOUND
-
         # The value and the number of times the key has been seen
         # are stored in the items dictionary.
-        value, count = self.items[key]
+        try:
+            value, count = self.items[key]
+        except KeyError:
+            return _NOT_FOUND
 
         if count > 0:
             self.frequency[count].remove(key)
@@ -80,6 +82,8 @@ class LFUCache:
         if count not in self.frequency:
             self.frequency[count] = deque()
 
+        # Add the key in a position that indicates that it's the
+        # newest item in the list.
         self.frequency[count].append(key)
         self.items[key] = (value, count)
 
@@ -104,9 +108,10 @@ class LFUCache:
         :return: A tuple of the value and the access frequency, or the not found value.
         :rtype: Union[(int, int), int]
         """
-        if key not in self.items:
+        try:
+            return self.items[key]
+        except KeyError:
             return _NOT_FOUND
-        return self.items[key]
 
 
     def put(self, key, value):
@@ -124,9 +129,9 @@ class LFUCache:
         if key in self.items:
             self.items[key] = (value, self.items[key][-1])
         else:
-            if self.item_count == self.max_items:
-                # Get the lowest frequency count, and then get the oldest item from that group of
-                # items. The oldest item will be the leftmost item in the deque list.
+            if self.item_count >= self.max_items:
+                # Get the lowest frequency count, and then get the oldest item from that group
+                # of items. The oldest item will be the leftmost item in the list.
                 least_frequent = min(self.frequency)
                 oldest_item_key = self.frequency[least_frequent].popleft()
 
